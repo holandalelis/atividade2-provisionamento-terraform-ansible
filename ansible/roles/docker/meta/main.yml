@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  role_name: docker
+  description: Instala o Docker Engine a partir do repositorio oficial da Docker
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+dependencies: []

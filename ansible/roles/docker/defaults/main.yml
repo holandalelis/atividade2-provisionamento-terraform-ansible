@@ -1,0 +1,15 @@
+---
+# Usuario nao-root que passa a poder falar com o socket do Docker.
+docker_usuario: ubuntu
+
+# Pacotes do Docker Engine instalados a partir do repositorio oficial.
+docker_pacotes:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+
+# SDK Python exigido pelos modulos community.docker.
+docker_pacotes_python:
+  - python3-docker

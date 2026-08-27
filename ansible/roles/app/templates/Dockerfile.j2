@@ -1,0 +1,14 @@
+# Dockerfile gerado pelo Ansible ({{ ansible_managed }}).
+# Baseado no tutorial oficial "Getting Started" da Docker.
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install --production
+
+COPY . .
+
+EXPOSE {{ app_porta_container }}
+
+CMD ["node", "src/index.js"]

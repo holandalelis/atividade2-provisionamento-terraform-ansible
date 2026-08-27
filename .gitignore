@@ -1,0 +1,38 @@
+# ---------------------------------------------------------------------------
+# Segredos e credenciais -- NUNCA versionar
+# ---------------------------------------------------------------------------
+ansible/.vault_pass
+*.pem
+*.key
+.env
+credentials
+
+# ---------------------------------------------------------------------------
+# Terraform
+# ---------------------------------------------------------------------------
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.*
+terraform.tfstate.d/
+*.tfplan
+*.tfvars
+!exemplo.tfvars
+crash.log
+terraform/.chaves/
+
+# ---------------------------------------------------------------------------
+# Ansible
+# ---------------------------------------------------------------------------
+ansible/inventory/*.aws_ec2.yml
+*.retry
+ansible/collections/
+
+# ---------------------------------------------------------------------------
+# Sistema operacional / editores
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

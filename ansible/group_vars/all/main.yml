@@ -1,0 +1,5 @@
+---
+# Variaveis nao sensiveis, compartilhadas por todos os hosts.
+# A senha de admin fica no arquivo vault.yml (cifrado), nunca aqui.
+app_nome: getting-started-app
+app_porta_host: 3000

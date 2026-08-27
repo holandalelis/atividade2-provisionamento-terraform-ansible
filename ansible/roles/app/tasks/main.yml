@@ -1,0 +1,98 @@
+---
+# Publica a getting-started-app como container Docker.
+# O build e o run usam exclusivamente modulos idempotentes da colecao
+# community.docker -- nunca command/shell, conforme exigido pela atividade.
+
+- name: Instalar o git (necessario para clonar a aplicacao)
+  ansible.builtin.apt:
+    name: git
+    state: present
+  become: true
+
+- name: Clonar o codigo-fonte oficial da getting-started-app
+  ansible.builtin.git:
+    repo: "{{ app_repo }}"
+    dest: "{{ app_dir }}"
+    version: "{{ app_versao }}"
+    # update: false mantem a idempotencia -- sem isso, o modulo faria fetch
+    # a cada execucao e poderia reportar "changed" indevidamente.
+    update: false
+  become: true
+  register: clone_app
+
+- name: Ajustar o dono do diretorio da aplicacao
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_usuario }}"
+    group: "{{ app_usuario }}"
+    recurse: true
+  become: true
+
+# O repositorio oficial da Docker nao inclui um Dockerfile pronto:
+# o tutorial pede que o aluno escreva o seu. Aqui ele vem de um template.
+- name: Publicar o Dockerfile da aplicacao
+  ansible.builtin.template:
+    src: Dockerfile.j2
+    dest: "{{ app_dir }}/Dockerfile"
+    owner: "{{ app_usuario }}"
+    group: "{{ app_usuario }}"
+    mode: "0644"
+  become: true
+  register: dockerfile
+
+- name: Construir a imagem Docker da aplicacao
+  community.docker.docker_image:
+    name: "{{ app_imagem }}"
+    tag: "{{ app_tag }}"
+    source: build
+    state: present
+    # force_source so e true quando o Dockerfile mudou: assim uma segunda
+    # execucao sem alteracoes reaproveita a imagem e reporta changed=0.
+    force_source: "{{ dockerfile is changed }}"
+    build:
+      path: "{{ app_dir }}"
+      pull: false
+  become: true
+
+- name: Executar o container da aplicacao na porta {{ app_porta_host }}
+  community.docker.docker_container:
+    name: "{{ app_nome }}"
+    image: "{{ app_imagem }}:{{ app_tag }}"
+    state: started
+    restart_policy: "{{ app_restart_policy }}"
+    published_ports:
+      - "{{ app_porta_host }}:{{ app_porta_container }}"
+    env:
+      # Variavel sensivel simulada, vinda do ansible-vault.
+      ADMIN_PASSWORD: "{{ app_admin_password }}"
+      NODE_ENV: production
+    # Recria o container apenas quando a definicao muda de fato.
+    comparisons:
+      "*": strict
+  become: true
+  register: container
+
+- name: Aguardar a aplicacao responder na porta {{ app_porta_host }}
+  ansible.builtin.wait_for:
+    host: 0.0.0.0
+    port: "{{ app_porta_host }}"
+    state: started
+    timeout: 90
+
+- name: Validar que a aplicacao retorna HTTP 200
+  ansible.builtin.uri:
+    url: "http://localhost:{{ app_porta_host }}/"
+    method: GET
+    status_code: 200
+  register: healthcheck
+  retries: 10
+  delay: 5
+  until: healthcheck.status is defined and healthcheck.status == 200
+  changed_when: false
+
+- name: Exibir o endereco publico da aplicacao
+  ansible.builtin.debug:
+    msg: >-
+      Aplicacao {{ app_nome }} no ar em
+      http://{{ ansible_host | default(inventory_hostname) }}:{{ app_porta_host }}

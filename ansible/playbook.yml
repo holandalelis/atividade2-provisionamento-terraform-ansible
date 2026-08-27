@@ -1,0 +1,42 @@
+---
+# ===========================================================================
+# Playbook principal: configura o servidor provisionado pelo Terraform.
+#
+# Alvo: grupo "webserver", populado pelo inventario dinamico
+# amazon.aws.aws_ec2 a partir da tag Funcao=webserver aplicada pelo Terraform.
+#
+# Execucao (manual ou disparada pelo local-exec do Terraform):
+#   ansible-playbook -i inventory/dev.aws_ec2.yml playbook.yml
+# ===========================================================================
+
+- name: Configurar o servidor web e publicar a getting-started-app
+  hosts: webserver
+  gather_facts: true
+
+  # A senha de admin fica cifrada com ansible-vault.
+  vars_files:
+    - group_vars/all/vault.yml
+
+  pre_tasks:
+    - name: Aguardar o cloud-init concluir antes de mexer no APT
+      ansible.builtin.raw: cloud-init status --wait || true
+      changed_when: false
+
+    - name: Confirmar que a distribuicao e suportada
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+        fail_msg: "Este playbook foi escrito para Ubuntu, encontrado: {{ ansible_distribution }}"
+        quiet: true
+
+  roles:
+    - role: docker
+    - role: app
+
+  post_tasks:
+    - name: Resumo do provisionamento
+      ansible.builtin.debug:
+        msg:
+          - "Ambiente: {{ ambiente | default('nao informado') }}"
+          - "Host: {{ inventory_hostname }}"
+          - "URL: http://{{ ansible_host | default(inventory_hostname) }}:3000"

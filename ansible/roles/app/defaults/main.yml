@@ -1,0 +1,16 @@
+---
+app_nome: getting-started-app
+app_repo: https://github.com/docker/getting-started-app.git
+app_versao: main
+
+app_dir: /opt/getting-started-app
+app_usuario: ubuntu
+
+app_imagem: getting-started-app
+app_tag: "1.0.0"
+
+app_porta_host: 3000
+app_porta_container: 3000
+
+# Politica de restart: o container volta sozinho apos reboot da instancia.
+app_restart_policy: unless-stopped

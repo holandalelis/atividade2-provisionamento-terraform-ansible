@@ -1,0 +1,12 @@
+---
+galaxy_info:
+  role_name: app
+  description: Constroi a imagem e executa a getting-started-app como container
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+dependencies:
+  - role: docker

@@ -1,0 +1,39 @@
+# Arquivo GERADO pelo Terraform (recurso local_file.inventario_vars).
+# Nao edite manualmente: alteracoes sao sobrescritas no proximo apply.
+#
+# Inventario dinamico da colecao amazon.aws: em vez de uma lista fixa de IPs,
+# o Ansible consulta a API da AWS em tempo de execucao e seleciona as
+# instancias pelas tags que o Terraform aplicou.
+plugin: amazon.aws.aws_ec2
+
+regions:
+  - ${regiao}
+
+filters:
+  tag:Projeto: ${projeto}
+  tag:Ambiente: ${ambiente}
+  tag:Funcao: webserver
+  instance-state-name: running
+
+# Agrupa por tag para o playbook poder mirar em "webserver".
+# Usa ec2_tags (tags esta depreciado na colecao amazon.aws).
+keyed_groups:
+  - key: ec2_tags.Funcao
+    prefix: ""
+    separator: ""
+
+# Alternativa explicita, independente de keyed_groups: garante que o grupo
+# "webserver" exista mesmo que o esquema de tags mude.
+groups:
+  webserver: "'webserver' in (ec2_tags.Funcao | default(''))"
+
+# O nome do host no inventario e o proprio IP publico da instancia.
+# "ip-address" e o nome do filtro na API da AWS para o IP publico.
+hostnames:
+  - ip-address
+
+compose:
+  ansible_host: public_ip_address
+  ansible_user: "'ubuntu'"
+  ansible_ssh_private_key_file: "'${caminho_chave}'"
+  ansible_ssh_common_args: "'-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'"
