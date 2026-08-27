@@ -6,7 +6,7 @@ infraestrutura, o **Ansible** configura o que roda dentro dela, e a aplicação
 sobe como container na porta **3000**.
 
 > **Disciplina:** Infraestrutura como Código — Pós-graduação em DevOps
-> **Atividade 3 — Projeto Final**
+> **Atividade 2 — Projeto Final**
 
 ---
 
