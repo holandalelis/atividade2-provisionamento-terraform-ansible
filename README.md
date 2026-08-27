@@ -229,6 +229,43 @@ Os três recursos abaixo estão em `terraform/main.tf`:
 | AWS CLI | v2 | Credenciais configuradas |
 | Python | >= 3.10 | Com `boto3` e `botocore` |
 
+### Observação para quem executa no Windows
+
+O Ansible não roda nativamente no Windows. Este projeto foi executado com o
+Terraform no Windows e o Ansible dentro do WSL (Ubuntu 24.04), ligados pelo
+wrapper [`scripts/ansible-wsl.sh`](scripts/ansible-wsl.sh).
+
+O wrapper resolve três diferenças entre os dois lados:
+
+1. **Conversão de caminhos** — `C:/projeto` (ou `/c/projeto`, no Git Bash) vira
+   `/mnt/c/projeto`, formato que o Ansible enxerga.
+2. **Permissão da chave SSH** — o drive `C:` é montado no WSL com permissão fixa
+   `0644`, e o SSH recusa chaves privadas que não estejam em `0600`. O wrapper
+   copia a chave para o filesystem nativo do WSL antes de cada execução.
+3. **Credenciais da AWS** — repassa `~/.aws` para dentro do WSL, já que o
+   inventário dinâmico precisa consultar a API da AWS.
+
+A ativação fica em [`terraform/terraform.tfvars`](terraform/exemplo.tfvars):
+
+```hcl
+comando_ansible    = "bash ../scripts/ansible-wsl.sh"
+dir_chaves_ansible = "/root/.ssh/iac-final"
+ansible_no_wsl     = true
+```
+
+**Em Linux ou macOS nada disso é necessário:** basta remover essas três linhas
+e os valores padrão (`ansible-playbook` direto) já funcionam.
+
+Preparação do WSL, uma vez só:
+
+```bash
+wsl --install Ubuntu-24.04
+```
+
+```bash
+python3 -m venv /opt/ansible-venv && /opt/ansible-venv/bin/pip install ansible-core boto3 botocore docker
+```
+
 Instalação das dependências do Ansible:
 
 ```bash
@@ -415,14 +452,28 @@ aws ec2 describe-instances --region us-east-1 --filters "Name=instance-state-nam
 
 ## Evidências
 
-Os arquivos estão em `evidencias/`.
+Todas as evidências foram capturadas durante a execução real do projeto na
+AWS e estão em [`evidencias/`](evidencias/).
 
-| Evidência | Arquivo |
-|---|---|
-| Aplicação no navegador | `evidencias/app_navegador.png` |
-| Saída de `curl` contra o IP público | `evidencias/app_curl.txt` |
-| Instância na console AWS | `evidencias/instancia_aws.png` |
-| Ansible com `changed=0` (idempotência) | `evidencias/idempotencia_ansible.txt` |
-| Terraform "No changes" | `evidencias/idempotencia_terraform.txt` |
-| `terraform destroy` concluído | `evidencias/destroy.txt` |
-| Região sem instâncias ativas | `evidencias/aws_limpo.txt` |
+| # | Evidência | Arquivo | O que comprova |
+|---|---|---|---|
+| 1 | Aplicação no navegador (dev) | [`app_navegador.png`](evidencias/app_navegador.png) | A getting-started-app no ar, com itens gravados pelo backend |
+| 2 | Aplicação no navegador (prod) | [`app_navegador_prod.png`](evidencias/app_navegador_prod.png) | O segundo workspace no ar, com banco independente do dev |
+| 3 | `curl` contra o IP público | [`app_curl.png`](evidencias/app_curl.png) | HTTP 200 na porta 3000 a partir da internet |
+| 4 | EC2 e Security Group na AWS | [`instancia_aws.png`](evidencias/instancia_aws.png) | t3.micro `running`, portas 22 e 3000 liberadas, tags aplicadas |
+| 5 | Workspaces dev e prod | [`workspaces.png`](evidencias/workspaces.png) | States isolados, CIDRs distintos (10.10 e 10.20), ambos HTTP 200 |
+| 6 | Idempotência do Ansible | [`idempotencia_ansible.png`](evidencias/idempotencia_ansible.png) | 2ª execução do playbook com **`changed=0`** |
+| 7 | Idempotência do Terraform | [`idempotencia_terraform.png`](evidencias/idempotencia_terraform.png) | `local-exec` chamando o Ansible e, na sequência, **"No changes"** |
+| 8 | Ausência de `remote-exec` | [`sem_remote_exec.png`](evidencias/sem_remote_exec.png) | Os únicos provisioners são `local-exec` |
+| 9 | Variável protegida com vault | [`ansible_vault.png`](evidencias/ansible_vault.png) | `vault.yml` cifrado no repositório e legível só com a senha |
+| 10 | Destruição dos recursos | [`destroy.png`](evidencias/destroy.png) | 32 recursos destruídos e região `us-east-1` sem nada remanescente |
+
+### Resultado da execução real
+
+```
+Terraform:  Apply complete!  Resources: 16 added   (por workspace)
+Ansible:    PLAY RECAP  ok=22  changed=11  failed=0     (1a execucao)
+Ansible:    PLAY RECAP  ok=21  changed=0   failed=0     (2a execucao - idempotente)
+Terraform:  No changes. Your infrastructure matches the configuration.
+Terraform:  Destroy complete!  Resources: 16 destroyed  (por workspace)
+```
